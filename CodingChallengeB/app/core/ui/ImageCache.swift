@@ -3,7 +3,7 @@ import UIKit
 
 class ImageCache {
     static let shared = NSCache<NSURL, UIImage>()
-    
+
     init() {
         // Configure cache limits
         ImageCache.shared.countLimit = 100 // Maximum 100 images

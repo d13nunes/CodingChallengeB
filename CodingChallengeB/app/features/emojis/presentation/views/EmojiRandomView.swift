@@ -3,12 +3,11 @@ import SwiftUI
 
 struct EmojiRandomView: View {
     @StateObject private var viewModel: EmojiRandomViewModel
+    @State private var isEnable = false
 
     init(viewModel: EmojiRandomViewModel) {
         _viewModel = .init(wrappedValue: viewModel)
     }
-
-    @State private var isEnable = false
 
     var body: some View {
         VStack {
@@ -16,18 +15,17 @@ struct EmojiRandomView: View {
             case .initial, .loadingRandomEmoji:
                 ProgressView()
             case let .loaded(emoji):
-              CachedAsyncImage(url: emoji.url){
-                $0
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-            } placeholder: {
-ProgressView().redacted(reason: .placeholder)
-            } error: {
-                Text("Error")
-            }
-            .frame(width: 120, height: 120)
+                CachedAsyncImage(url: emoji.url) {
+                    $0.resizable()
+                        .aspectRatio(contentMode: .fit)
+                } placeholder: {
+                    ProgressView().redacted(reason: .placeholder)
+                } error: {
+                    Text("Error")
+                }
+                .frame(width: 120, height: 120)
                 Button("Random Emoji") {
-                    Task {
+                    Task { @MainActor in
                         await getRandomEmoji()
                     }
                 }

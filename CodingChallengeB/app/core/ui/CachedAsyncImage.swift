@@ -9,6 +9,7 @@ struct CachedAsyncImage<Content: View, Placeholder: View, ErrorView: View>: View
     let error: () -> ErrorView
 
     @State private var cachedImage: UIImage?
+    @State private var cachedURL: URL?
 
     init(
         url: URL?,
@@ -25,13 +26,13 @@ struct CachedAsyncImage<Content: View, Placeholder: View, ErrorView: View>: View
     }
 
     var body: some View {
-        Group {
-            if let cachedImage {
+        return Group {
+            if let cachedImage, cachedURL == url {
                 content(Image(uiImage: cachedImage))
             } else {
                 AsyncImage(url: url, scale: scale) { phase in
                     switch phase {
-                    case .success(let image):
+                    case let .success(image):
                         content(image)
                             .onAppear {
                                 if let url { saveToCache(from: url) }
@@ -44,18 +45,18 @@ struct CachedAsyncImage<Content: View, Placeholder: View, ErrorView: View>: View
                 }
             }
         }
-        .task {
+        .onAppear {
             loadFromCache()
         }
     }
 
     private func loadFromCache() {
-      guard let url else { return }
+        guard let url else { return }
         if let cached = ImageCache.shared.object(forKey: url as NSURL) {
             cachedImage = cached
         }
     }
-    
+
     private func saveToCache(from url: URL) {
         Task {
             do {

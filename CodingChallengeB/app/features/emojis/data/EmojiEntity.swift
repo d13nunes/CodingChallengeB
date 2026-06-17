@@ -3,8 +3,9 @@ import SwiftData
 
 @Model
 final class EmojiEntity {
+    @Attribute(.unique)
+    var id: UUID = UUID()
     var name: String
-    @Attribute(.unique) // @urlString is what distinguishes emojis from each other because of that is marked has unique
     var urlString: String
 
     init(name: String, urlString: String) {

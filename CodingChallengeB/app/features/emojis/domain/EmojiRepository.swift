@@ -22,12 +22,10 @@ class EmojiRepository: EmojiRepositoryProtocol {
 
     func fetch(useCache: Bool = true) async -> Result<[EmojiValue], EmojiRepositoryError> {
         do {
-            let sortBy: [SortDescriptor<EmojiEntity>] = [SortDescriptor(\.name, order: .forward)]
             if useCache {
-                let descriptor = FetchDescriptor<EmojiEntity>(sortBy: sortBy)
-                let localEmojis: [EmojiEntity] = try localSource.fetch(descriptor)
+                let localEmojis = try await getCachedEmojis()
                 if !localEmojis.isEmpty {
-                    return .success(localEmojis.map { $0.toValue() })
+                    return .success(localEmojis)
                 }
             }
             let remoteResult = await remoteSource.fetchAll()
@@ -36,18 +34,23 @@ class EmojiRepository: EmojiRepositoryProtocol {
             case let .failure(error):
                 return .failure(EmojiRepositoryError.failed(reason: error.localizedDescription))
             case let .success(emojis):
+                try localSource.delete(model: EmojiEntity.self)
                 for emoji in emojis {
-                    let domainEmoji = EmojiEntity(name: emoji.name, urlString: emoji.url)
-                    localSource.insert(domainEmoji)
+                    localSource.insert(EmojiEntity(name: emoji.name, urlString: emoji.url))
                 }
                 try localSource.save()
             }
-            let descriptor = FetchDescriptor<EmojiEntity>(sortBy: sortBy)
-            let localEmojis: [EmojiEntity] = try localSource.fetch(descriptor)
-            return .success(localEmojis.map { $0.toValue() })
+            let localEmojis = try await getCachedEmojis()
+            return .success(localEmojis)
         } catch {
             return .failure(EmojiRepositoryError.failed(reason: error.localizedDescription))
         }
+    }
+
+    private func getCachedEmojis(sortBy: [SortDescriptor<EmojiEntity>] = [SortDescriptor(\.name, order: .forward)]) async throws -> [EmojiValue] {
+        let descriptor = FetchDescriptor<EmojiEntity>(sortBy: sortBy)
+        let localEmojis: [EmojiEntity] = try localSource.fetch(descriptor)
+        return localEmojis.map { $0.toValue() }
     }
 
     func fetchRandom() async -> Result<EmojiValue, EmojiRepositoryError> {
@@ -67,6 +70,12 @@ class EmojiRepository: EmojiRepositoryProtocol {
 
 extension EmojiEntity {
     func toValue() -> EmojiValue {
-        return EmojiValue(name: name, url: URL(string: urlString))
+        return EmojiValue(id: id, name: name, url: URL(string: urlString))
+    }
+}
+
+extension EmojiDTO {
+    func toEntity() -> EmojiEntity {
+        return EmojiEntity(name: name, urlString: url)
     }
 }

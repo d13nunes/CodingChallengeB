@@ -1,6 +1,7 @@
 import Foundation
 
-struct EmojiValue {
+struct EmojiValue: Identifiable {
+    let id: UUID
     let name: String
     let url: URL?
 }

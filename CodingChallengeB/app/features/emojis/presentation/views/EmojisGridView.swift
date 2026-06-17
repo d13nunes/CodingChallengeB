@@ -21,12 +21,17 @@ struct EmojisGridView: View {
                         ForEach(emojis, id: \.name) { emoji in
                             EmojiCardView(name: emoji.name, imageURL: emoji.url)
                                 .frame(height: 120)
+                                .onTapGesture {
+                                    Task {
+                                        await viewModel.send(.hideEmoji(emoji: emoji))
+                                    }
+                                }
                         }
                     }
                 }
             case let .error(error):
                 VStack {
-                    Text("Err or \(error)")
+                    Text("Error: \(error)")
                     Button("Retry") {
                         load()
                     }
