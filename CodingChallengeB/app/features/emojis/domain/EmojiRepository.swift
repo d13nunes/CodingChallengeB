@@ -7,7 +7,7 @@ enum EmojiRepositoryError: Error {
 
 protocol EmojiRepositoryProtocol {
     func fetch(useCache: Bool) async -> Result<[EmojiValue], EmojiRepositoryError>
-    
+    func fetchRandom() async -> Result<EmojiValue, EmojiRepositoryError>
 }
 
 @MainActor
@@ -50,6 +50,19 @@ class EmojiRepository: EmojiRepositoryProtocol {
         }
     }
 
+    func fetchRandom() async -> Result<EmojiValue, EmojiRepositoryError> {
+        let result = await fetch()
+        switch result {
+        case let .failure(error):
+            return .failure(error)
+        case let .success(emojis):
+            guard let randomEmoji = emojis.randomElement() else {
+                return .failure(EmojiRepositoryError.failed(reason: "No emoji found"))
+            }
+            print("Random emoji: \(randomEmoji)")
+            return .success(randomEmoji)
+        }
+    }
 }
 
 extension EmojiEntity {
