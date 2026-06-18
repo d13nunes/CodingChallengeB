@@ -8,7 +8,7 @@ struct CodingChallengeBApp: App {
     @StateObject private var mainViewModel: MainViewModel
 
     init() {
-        let schema = Schema([EmojiEntity.self])
+        let schema = Schema([EmojiEntity.self, AvatarEntity.self])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
         let container: ModelContainer
         do {
@@ -19,14 +19,23 @@ struct CodingChallengeBApp: App {
         sharedModelContainer = container
 
         let appRouter = AppRouter()
-        let repository = EmojiRepository(
+        let emojiRepo = EmojiRepository(
             remoteSource: EmojisAPI(session: URLSession.shared),
             localSource: container.mainContext
         )
-        let emojiVM = EmojiRandomViewModel(repository: repository)
+        let avatarRepo = AvatarRepository(
+            remoteSource: AvatarsAPI(session: URLSession.shared),
+            localSource: container.mainContext
+        )
+        let emojiVM = EmojiRandomViewModel(repository: emojiRepo)
+        let avatarSearchVM = AvatarSearchViewModel(repository: avatarRepo)
 
         _router = StateObject(wrappedValue: appRouter)
-        _mainViewModel = StateObject(wrappedValue: MainViewModel(emojiRandomViewModel: emojiVM, appRouter: appRouter))
+        _mainViewModel = StateObject(wrappedValue: MainViewModel(
+            emojiRandomViewModel: emojiVM,
+            avatarSearchViewModel: avatarSearchVM,
+            appRouter: appRouter
+        ))
     }
 
     var body: some Scene {
@@ -34,19 +43,33 @@ struct CodingChallengeBApp: App {
             NavigationStack(path: $router.navigationPath) {
                 MainScreen(viewModel: mainViewModel)
                     .navigationDestination(for: Route.self) { route in
-                        let repository = EmojiRepository(
+                        let emojiRepo = EmojiRepository(
                             remoteSource: EmojisAPI(session: URLSession.shared),
                             localSource: sharedModelContainer.mainContext
                         )
                         switch route {
                         case .main:
+                            let avatarRepo = AvatarRepository(
+                                remoteSource: AvatarsAPI(session: URLSession.shared),
+                                localSource: sharedModelContainer.mainContext
+                            )
                             MainScreen(viewModel: MainViewModel(
-                                emojiRandomViewModel: EmojiRandomViewModel(repository: repository),
+                                emojiRandomViewModel: EmojiRandomViewModel(repository: emojiRepo),
+                                avatarSearchViewModel: AvatarSearchViewModel(repository: avatarRepo),
                                 appRouter: router
                             ))
                         case .emojiesList:
-                          EmojisGridView(viewModel: EmojisViewModel(repository: repository))
-                            .navigationTitle("Emojies")
+                            EmojisGridView(viewModel: EmojisViewModel(repository: emojiRepo))
+                                .navigationTitle("Emojies")
+                        case .avatarsList:
+                            let avatarRepo = AvatarRepository(
+                                remoteSource: AvatarsAPI(session: URLSession.shared),
+                                localSource: sharedModelContainer.mainContext
+                            )
+                            AvatarsScreen(
+                                historyViewModel: AvatarHistoryViewModel(repository: avatarRepo)
+                            )
+                            .navigationTitle("Avatars")
                         }
                     }
             }

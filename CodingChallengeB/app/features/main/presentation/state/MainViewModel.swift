@@ -12,19 +12,25 @@ enum MainViewEvents {
     case load
     case showEmojis
     case fetchRandomEmoji
+    case showAvatars
+    case search(username: String)
 }
+
 @MainActor
 class MainViewModel: ViewModel<MainViewState, MainViewEvents> {
     @Published var state: MainViewState
-   
+
     private let emojiRandomViewModel: EmojiRandomViewModel
+    private let avatarSearchViewModel: AvatarSearchViewModel
     private let appRouter: AppRouter
     private var cancellables = Set<AnyCancellable>()
 
-    init(emojiRandomViewModel: EmojiRandomViewModel, appRouter: AppRouter) {
+    init(emojiRandomViewModel: EmojiRandomViewModel, avatarSearchViewModel: AvatarSearchViewModel, appRouter: AppRouter) {
         self.emojiRandomViewModel = emojiRandomViewModel
+        self.avatarSearchViewModel = avatarSearchViewModel
         self.appRouter = appRouter
         state = .initial
+
         emojiRandomViewModel.$state
             .sink { [weak self] state in
                 guard let self else { return }
@@ -36,7 +42,24 @@ class MainViewModel: ViewModel<MainViewState, MainViewEvents> {
                 default:
                     break
                 }
-            }   .store(in: &cancellables)
+            }
+            .store(in: &cancellables)
+
+        avatarSearchViewModel.$state
+            .sink { [weak self] state in
+                guard let self else { return }
+                switch state {
+                case .loading:
+                    self.state = .loadingImage
+                case let .loaded(avatar):
+                    self.state = .image(url: avatar.avatarUrl)
+                case let .error(message):
+                    self.state = .error(message)
+                default:
+                    break
+                }
+            }
+            .store(in: &cancellables)
     }
 
     func send(_ event: MainViewEvents) async {
@@ -45,10 +68,15 @@ class MainViewModel: ViewModel<MainViewState, MainViewEvents> {
             state = .loadingImage
             await emojiRandomViewModel.send(.loadRandomEmoji)
         case .showEmojis:
-          appRouter.push(.emojiesList)
+            appRouter.push(.emojiesList)
         case .fetchRandomEmoji:
-          state = .loadingImage
-          await emojiRandomViewModel.send(.loadRandomEmoji)
+            state = .loadingImage
+            await emojiRandomViewModel.send(.loadRandomEmoji)
+        case .showAvatars:
+            appRouter.push(.avatarsList)
+        case let .search(username):
+            state = .loadingImage
+            await avatarSearchViewModel.send(.search(username: username))
         }
     }
 }
