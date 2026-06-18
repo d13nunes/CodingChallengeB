@@ -62,7 +62,6 @@ class EmojiRepository: EmojiRepositoryProtocol {
             guard let randomEmoji = emojis.randomElement() else {
                 return .failure(EmojiRepositoryError.failed(reason: "No emoji found"))
             }
-            print("Random emoji: \(randomEmoji)")
             return .success(randomEmoji)
         }
     }
