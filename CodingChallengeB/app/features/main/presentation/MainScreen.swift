@@ -1,9 +1,11 @@
+import Combine
 import SwiftData
 import SwiftUI
 
 struct MainScreen: View {
-    @StateObject private var viewModel: MainViewModel
+    @State private var viewModel: MainViewModel
     @State private var searchQuery = ""
+    @FocusState private var isInputFocused: Bool
 
     init(viewModel: MainViewModel) {
         _viewModel = .init(wrappedValue: viewModel)
@@ -11,27 +13,30 @@ struct MainScreen: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            switch viewModel.state {
-            case .initial:
-                EmptyView()
-            case let .image(url):
-                CachedAsyncImage(url: url) {
-                    $0.resizable().aspectRatio(contentMode: .fit)
-                } placeholder: {
-                    ProgressView().redacted(reason: .placeholder)
-                } error: {
-                    Text("Error")
+            Group {
+                switch viewModel.state {
+                case .initial:
+                    EmptyView()
+                case let .image(url):
+                    CachedAsyncImage(url: url) {
+                        $0.resizable().aspectRatio(contentMode: .fit)
+                    } placeholder: {
+                        ProgressView().redacted(reason: .placeholder)
+                    } error: {
+                        Text("Error")
+                    }
+                case let .error(error):
+                    Text("Error: \(error)")
+                case .loadingImage:
+                    ProgressView()
                 }
-                .frame(width: 120, height: 120)
-            case let .error(error):
-                Text("Error: \(error)")
-            case .loadingImage:
-                ProgressView()
+            }.frame(width: 120, height: 120)
+            Button("Random Emoji") {
+                fetchRandomEmoji()
             }
-            Button("Random Emoji") { fetchRandomEmoji() }
-                .disabled(viewModel.state == .loadingImage)
-
+            .disabled(viewModel.state == .loadingImage)
             Button("Show All Emojis") {
+                isInputFocused = false
                 Task { @MainActor in await viewModel.send(.showEmojis) }
             }
             HStack {
@@ -39,16 +44,22 @@ struct MainScreen: View {
                     .textFieldStyle(.roundedBorder)
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
+                    .focused($isInputFocused)
                     .onSubmit { searchAvatar() }
+                    .frame(maxWidth: 200)
 
                 Button("Search Avatar") { searchAvatar() }
                     .disabled(searchQuery.trimmingCharacters(in: .whitespaces).isEmpty
-                              || viewModel.state == .loadingImage)
+                        || viewModel.state == .loadingImage)
             }
             .padding(.horizontal)
-
             Button("Avatars") {
+                isInputFocused = false
                 Task { @MainActor in await viewModel.send(.showAvatars) }
+            }
+            Button("Apple Repos") {
+                isInputFocused = false
+                Task { @MainActor in await viewModel.send(.showAppleRepos) }
             }
         }
         .task {
@@ -59,10 +70,12 @@ struct MainScreen: View {
     }
 
     private func fetchRandomEmoji() {
+        isInputFocused = false
         Task { @MainActor in await viewModel.send(.fetchRandomEmoji) }
     }
 
     private func searchAvatar() {
+        isInputFocused = false
         Task { @MainActor in await viewModel.send(.search(username: searchQuery)) }
     }
 }
@@ -75,8 +88,8 @@ struct MainScreen: View {
     let avatarRepo = AvatarRepository(remoteSource: AvatarsAPI(session: URLSession.shared), localSource: container.mainContext)
     let router = AppRouter()
     let vm = MainViewModel(
-        emojiRandomViewModel: EmojiRandomViewModel(repository: emojiRepo),
-        avatarSearchViewModel: AvatarSearchViewModel(repository: avatarRepo),
+        emojiRepository: emojiRepo,
+        avatarRepository: avatarRepo,
         appRouter: router
     )
     MainScreen(viewModel: vm)

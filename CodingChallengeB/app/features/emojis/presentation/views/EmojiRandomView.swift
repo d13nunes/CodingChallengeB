@@ -2,7 +2,7 @@ import SwiftData
 import SwiftUI
 
 struct EmojiRandomView: View {
-    @StateObject private var viewModel: EmojiRandomViewModel
+    @State private var viewModel: EmojiRandomViewModel
     @State private var isEnable = false
 
     init(viewModel: EmojiRandomViewModel) {

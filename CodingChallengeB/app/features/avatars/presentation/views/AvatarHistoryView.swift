@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct AvatarHistoryView: View {
-    @StateObject private var viewModel: AvatarHistoryViewModel
+    @State private var viewModel: AvatarHistoryViewModel
 
     init(viewModel: AvatarHistoryViewModel) {
         _viewModel = .init(wrappedValue: viewModel)
@@ -33,6 +33,9 @@ struct AvatarHistoryView: View {
                 ) {
                     ForEach(avatars) { avatar in
                         AvatarCardView(username: avatar.username, avatarUrl: avatar.avatarUrl)
+                            .onTapGesture {
+                                Task { await viewModel.send(.delete(avatar)) }
+                            }
                     }
                 }
                 .padding(.horizontal)

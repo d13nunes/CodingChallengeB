@@ -13,70 +13,62 @@ enum MainViewEvents {
     case showEmojis
     case fetchRandomEmoji
     case showAvatars
+    case showAppleRepos
     case search(username: String)
 }
 
-@MainActor
-class MainViewModel: ViewModel<MainViewState, MainViewEvents> {
-    @Published var state: MainViewState
+@MainActor @Observable
+final class MainViewModel: ViewModel<MainViewState, MainViewEvents> {
+    var state: MainViewState = .initial
 
-    private let emojiRandomViewModel: EmojiRandomViewModel
-    private let avatarSearchViewModel: AvatarSearchViewModel
+    private let emojiRepository: EmojiRepositoryProtocol
+    private let avatarRepository: AvatarRepositoryProtocol
     private let appRouter: AppRouter
-    private var cancellables = Set<AnyCancellable>()
 
-    init(emojiRandomViewModel: EmojiRandomViewModel, avatarSearchViewModel: AvatarSearchViewModel, appRouter: AppRouter) {
-        self.emojiRandomViewModel = emojiRandomViewModel
-        self.avatarSearchViewModel = avatarSearchViewModel
+    init(
+        emojiRepository: EmojiRepositoryProtocol,
+        avatarRepository: AvatarRepositoryProtocol,
+        appRouter: AppRouter
+    ) {
+        self.emojiRepository = emojiRepository
+        self.avatarRepository = avatarRepository
         self.appRouter = appRouter
-        state = .initial
-
-        emojiRandomViewModel.$state
-            .sink { [weak self] state in
-                guard let self else { return }
-                switch state {
-                case let .loaded(emoji):
-                    self.state = .image(url: emoji.url)
-                case .error(let error):
-                    self.state = .error(error)
-                default:
-                    break
-                }
-            }
-            .store(in: &cancellables)
-
-        avatarSearchViewModel.$state
-            .sink { [weak self] state in
-                guard let self else { return }
-                switch state {
-                case .loading:
-                    self.state = .loadingImage
-                case let .loaded(avatar):
-                    self.state = .image(url: avatar.avatarUrl)
-                case let .error(message):
-                    self.state = .error(message)
-                default:
-                    break
-                }
-            }
-            .store(in: &cancellables)
     }
 
     func send(_ event: MainViewEvents) async {
         switch event {
-        case .load:
-            state = .loadingImage
-            await emojiRandomViewModel.send(.loadRandomEmoji)
+        case .load, .fetchRandomEmoji:
+            await loadRandomEmoji()
+        case let .search(username):
+            await search(username: username)
         case .showEmojis:
             appRouter.push(.emojiesList)
-        case .fetchRandomEmoji:
-            state = .loadingImage
-            await emojiRandomViewModel.send(.loadRandomEmoji)
         case .showAvatars:
             appRouter.push(.avatarsList)
-        case let .search(username):
-            state = .loadingImage
-            await avatarSearchViewModel.send(.search(username: username))
+        case .showAppleRepos:
+            appRouter.push(.appleRepos)
+        }
+    }
+
+    private func loadRandomEmoji() async {
+        state = .loadingImage
+        switch await emojiRepository.fetchRandom() {
+        case let .success(emoji):
+            state = .image(url: emoji.url)
+        case let .failure(error):
+            state = .error(error.localizedDescription)
+        }
+    }
+
+    private func search(username: String) async {
+        let trimmed = username.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        state = .loadingImage
+        switch await avatarRepository.searchUser(username: trimmed.lowercased()) {
+        case let .success(avatar):
+            state = .image(url: avatar.avatarUrl)
+        case let .failure(error):
+            state = .error(error.localizedDescription)
         }
     }
 }

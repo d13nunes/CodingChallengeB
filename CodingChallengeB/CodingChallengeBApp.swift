@@ -4,8 +4,8 @@ import SwiftUI
 @main
 struct CodingChallengeBApp: App {
     let sharedModelContainer: ModelContainer
-    @StateObject private var router: AppRouter
-    @StateObject private var mainViewModel: MainViewModel
+    @State private var router: AppRouter
+    @State private var mainViewModel: MainViewModel
 
     init() {
         let schema = Schema([EmojiEntity.self, AvatarEntity.self])
@@ -19,23 +19,18 @@ struct CodingChallengeBApp: App {
         sharedModelContainer = container
 
         let appRouter = AppRouter()
-        let emojiRepo = EmojiRepository(
-            remoteSource: EmojisAPI(session: URLSession.shared),
-            localSource: container.mainContext
-        )
-        let avatarRepo = AvatarRepository(
-            remoteSource: AvatarsAPI(session: URLSession.shared),
-            localSource: container.mainContext
-        )
-        let emojiVM = EmojiRandomViewModel(repository: emojiRepo)
-        let avatarSearchVM = AvatarSearchViewModel(repository: avatarRepo)
-
-        _router = StateObject(wrappedValue: appRouter)
-        _mainViewModel = StateObject(wrappedValue: MainViewModel(
-            emojiRandomViewModel: emojiVM,
-            avatarSearchViewModel: avatarSearchVM,
+        router = appRouter
+        mainViewModel = MainViewModel(
+            emojiRepository: EmojiRepository(
+                remoteSource: EmojisAPI(session: URLSession.shared),
+                localSource: container.mainContext
+            ),
+            avatarRepository: AvatarRepository(
+                remoteSource: AvatarsAPI(session: URLSession.shared),
+                localSource: container.mainContext
+            ),
             appRouter: appRouter
-        ))
+        )
     }
 
     var body: some Scene {
@@ -43,33 +38,32 @@ struct CodingChallengeBApp: App {
             NavigationStack(path: $router.navigationPath) {
                 MainScreen(viewModel: mainViewModel)
                     .navigationDestination(for: Route.self) { route in
-                        let emojiRepo = EmojiRepository(
-                            remoteSource: EmojisAPI(session: URLSession.shared),
-                            localSource: sharedModelContainer.mainContext
-                        )
+                        let context = sharedModelContainer.mainContext
                         switch route {
                         case .main:
-                            let avatarRepo = AvatarRepository(
-                                remoteSource: AvatarsAPI(session: URLSession.shared),
-                                localSource: sharedModelContainer.mainContext
-                            )
-                            MainScreen(viewModel: MainViewModel(
-                                emojiRandomViewModel: EmojiRandomViewModel(repository: emojiRepo),
-                                avatarSearchViewModel: AvatarSearchViewModel(repository: avatarRepo),
-                                appRouter: router
-                            ))
+                            MainScreen(viewModel: mainViewModel)
                         case .emojiesList:
+                            let emojiRepo = EmojiRepository(
+                                remoteSource: EmojisAPI(session: URLSession.shared),
+                                localSource: context
+                            )
                             EmojisGridView(viewModel: EmojisViewModel(repository: emojiRepo))
                                 .navigationTitle("Emojies")
                         case .avatarsList:
                             let avatarRepo = AvatarRepository(
                                 remoteSource: AvatarsAPI(session: URLSession.shared),
-                                localSource: sharedModelContainer.mainContext
+                                localSource: context
                             )
                             AvatarsScreen(
                                 historyViewModel: AvatarHistoryViewModel(repository: avatarRepo)
                             )
                             .navigationTitle("Avatars")
+                        case .appleRepos:
+                            AppleReposView(
+                                viewModel: AppleReposViewModel(
+                                    repository: AppleRepoRepository(api: AppleReposApi(session: URLSession.shared))
+                                )
+                            )
                         }
                     }
             }

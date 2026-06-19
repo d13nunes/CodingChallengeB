@@ -2,7 +2,7 @@ import SwiftData
 import SwiftUI
 
 struct AvatarsScreen: View {
-    @StateObject private var historyViewModel: AvatarHistoryViewModel
+    @State private var historyViewModel: AvatarHistoryViewModel
 
     init(historyViewModel: AvatarHistoryViewModel) {
         _historyViewModel = .init(wrappedValue: historyViewModel)

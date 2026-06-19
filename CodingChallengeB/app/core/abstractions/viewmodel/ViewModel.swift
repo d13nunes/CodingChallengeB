@@ -1,6 +1,6 @@
 import Combine
 
-protocol ViewModel<State, Events>: ObservableObject {
+protocol ViewModel<State, Events> {
     associatedtype State
     associatedtype Events
 

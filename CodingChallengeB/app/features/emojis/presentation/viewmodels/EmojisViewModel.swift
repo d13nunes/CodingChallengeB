@@ -13,9 +13,9 @@ enum EmojisViewModelEvents {
     case hideEmoji(emoji: EmojiValue)
 }
 
-@MainActor
+@MainActor @Observable
 final class EmojisViewModel: ViewModel<EmojisViewModelState, EmojisViewModelEvents> {
-    @Published var state: EmojisViewModelState
+    var state: EmojisViewModelState
 
     private let repository: EmojiRepositoryProtocol
     private var hiddedEmojisId: Set<UUID> = []
@@ -44,7 +44,6 @@ final class EmojisViewModel: ViewModel<EmojisViewModelState, EmojisViewModelEven
         state = .loading
         let response = await repository.fetch(useCache: !forceRefresh)
         hiddedEmojisId.removeAll()
-
         switch response {
         case let .success(emojis):
             state = .loaded(emojis)

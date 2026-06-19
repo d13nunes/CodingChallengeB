@@ -2,7 +2,7 @@ import SwiftData
 import SwiftUI
 
 struct EmojisGridView: View {
-    @StateObject private var viewModel: EmojisViewModel
+    @State private var viewModel: EmojisViewModel
 
     init(viewModel: EmojisViewModel) {
         _viewModel = .init(wrappedValue: viewModel)

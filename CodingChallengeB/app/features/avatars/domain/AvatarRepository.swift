@@ -8,6 +8,7 @@ enum AvatarRepositoryError: Error {
 protocol AvatarRepositoryProtocol {
     func searchUser(username: String) async -> Result<AvatarValue, AvatarRepositoryError>
     func fetchHistory() async -> Result<[AvatarValue], AvatarRepositoryError>
+    func delete(username: String) async -> Result<Void, AvatarRepositoryError>
 }
 
 @MainActor
@@ -48,6 +49,22 @@ class AvatarRepository: AvatarRepositoryProtocol {
             )
             let entities = try localSource.fetch(descriptor)
             return .success(entities.map { $0.toValue() })
+        } catch {
+            return .failure(.failed(reason: error.localizedDescription))
+        }
+    }
+
+    func delete(username: String) async -> Result<Void, AvatarRepositoryError> {
+        do {
+            let lowered = username.lowercased()
+            let descriptor = FetchDescriptor<AvatarEntity>(
+                predicate: #Predicate { $0.username == lowered }
+            )
+            if let entity = try localSource.fetch(descriptor).first {
+                localSource.delete(entity)
+                try localSource.save()
+            }
+            return .success(())
         } catch {
             return .failure(.failed(reason: error.localizedDescription))
         }

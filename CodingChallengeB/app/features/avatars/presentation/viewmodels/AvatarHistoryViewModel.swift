@@ -10,11 +10,12 @@ enum AvatarHistoryState {
 
 enum AvatarHistoryEvents {
     case load
+    case delete(AvatarValue)
 }
 
-@MainActor
+@MainActor @Observable
 final class AvatarHistoryViewModel: ViewModel<AvatarHistoryState, AvatarHistoryEvents> {
-    @Published var state: AvatarHistoryState
+    var state: AvatarHistoryState
 
     private let repository: AvatarRepositoryProtocol
 
@@ -31,6 +32,16 @@ final class AvatarHistoryViewModel: ViewModel<AvatarHistoryState, AvatarHistoryE
             switch result {
             case let .success(avatars):
                 state = .loaded(avatars)
+            case let .failure(error):
+                state = .error(error.localizedDescription)
+            }
+        case let .delete(avatar):
+            let result = await repository.delete(username: avatar.username)
+            switch result {
+            case .success:
+                if case let .loaded(avatars) = state {
+                    state = .loaded(avatars.filter { $0.id != avatar.id })
+                }
             case let .failure(error):
                 state = .error(error.localizedDescription)
             }

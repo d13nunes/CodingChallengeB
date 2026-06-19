@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct AvatarSearchView: View {
-    @StateObject private var viewModel: AvatarSearchViewModel
+    @State private var viewModel: AvatarSearchViewModel
     @State private var query: String = ""
 
     init(viewModel: AvatarSearchViewModel) {
