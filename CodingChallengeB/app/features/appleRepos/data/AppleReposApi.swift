@@ -10,28 +10,24 @@ protocol AppleReposAPIProtocol {
 }
 
 class AppleReposApi: AppleReposAPIProtocol {
-    let session: URLSession
+    private let client: HTTPClientProtocol
 
-    init(session: URLSession) {
-        self.session = session
+    init(client: HTTPClientProtocol) {
+        self.client = client
+    }
+
+    convenience init(session: URLSession) {
+        self.init(client: HTTPClient(session: session))
     }
 
     func fetch(page: Int, size: Int) async -> Result<PaginatedResult<RepoDTO>, APIError> {
         guard let url = URL(string: "https://api.github.com/users/apple/repos?page=\(page)&per_page=\(size)") else {
             return .failure(.invalidURL)
         }
-        do {
-            let (data, response) = try await session.data(from: url)
-            let httpResponse = response as? HTTPURLResponse
-            guard httpResponse?.statusCode == 200 else {
-                return .failure(.badResponse)
-            }
-            let linkHeader = httpResponse?.allHeaderFields["Link"] as? String
-            let hasMore = hasMoreToLoad(linkHeader: linkHeader)
-            let repos = try JSONDecoder().decode([RepoDTO].self, from: data)
-            return .success(PaginatedResult(items: repos, hasMore: hasMore))
-        } catch {
-            return .failure(.unmapped(error.localizedDescription))
+        let result = await client.get(url, as: [RepoDTO].self)
+        return result.map { response in
+            let linkHeader = response.response.allHeaderFields["Link"] as? String
+            return PaginatedResult(items: response.value, hasMore: hasMoreToLoad(linkHeader: linkHeader))
         }
     }
 

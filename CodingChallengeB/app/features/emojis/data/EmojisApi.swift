@@ -1,44 +1,27 @@
-import Combine
 import Foundation
-
-enum APIError: Error {
-    case invalidURL
-    case requestFailed
-    case badResponse
-    case networkError
-    case decodeError
-    case unmapped(String)
-    case unknown
-}
 
 protocol EmojisAPIProtocol {
     func fetchAll() async -> Result<[EmojiDTO], APIError>
 }
 
 class EmojisAPI: EmojisAPIProtocol {
-    let session: URLSession
+    private let client: HTTPClientProtocol
 
-    init(session: URLSession) {
-        self.session = session
+    init(client: HTTPClientProtocol) {
+        self.client = client
+    }
+
+    convenience init(session: URLSession) {
+        self.init(client: HTTPClient(session: session))
     }
 
     func fetchAll() async -> Result<[EmojiDTO], APIError> {
         guard let url = URL(string: "https://api.github.com/emojis") else {
-            return .failure(APIError.invalidURL)
+            return .failure(.invalidURL)
         }
-        do {
-            let (data, response) = try await session.data(from: url)
-            guard (response as? HTTPURLResponse)?.statusCode == 200 else {
-                return .failure(APIError.badResponse)
-            }
-            let dictiornary = try JSONDecoder().decode([String: String].self, from: data)
-            let emojis = dictiornary.map { key, value in
-                EmojiDTO(name: key, url: value)
-            }
-            return .success(emojis)
-        } catch {
-            debugPrint("error: \(error.localizedDescription)")
-            return .failure(APIError.unmapped(error.localizedDescription))
+        let result = await client.get(url, as: [String: String].self)
+        return result.map { response in
+            response.value.map { EmojiDTO(name: $0.key, url: $0.value) }
         }
     }
 }

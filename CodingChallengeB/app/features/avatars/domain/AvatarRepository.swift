@@ -5,6 +5,15 @@ enum AvatarRepositoryError: Error {
     case failed(reason: String)
 }
 
+extension AvatarRepositoryError: LocalizedError {
+    var errorDescription: String? {
+        switch self {
+        case let .failed(reason):
+            return reason
+        }
+    }
+}
+
 protocol AvatarRepositoryProtocol {
     func searchUser(username: String) async -> Result<AvatarValue, AvatarRepositoryError>
     func fetchHistory() async -> Result<[AvatarValue], AvatarRepositoryError>

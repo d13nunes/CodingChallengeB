@@ -5,6 +5,15 @@ enum EmojiRepositoryError: Error {
     case failed(reason: String)
 }
 
+extension EmojiRepositoryError: LocalizedError {
+    var errorDescription: String? {
+        switch self {
+        case let .failed(reason):
+            return reason
+        }
+    }
+}
+
 protocol EmojiRepositoryProtocol {
     func fetch(useCache: Bool) async -> Result<[EmojiValue], EmojiRepositoryError>
     func fetchRandom() async -> Result<EmojiValue, EmojiRepositoryError>

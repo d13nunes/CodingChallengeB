@@ -5,6 +5,15 @@ enum AppleRepoRepositoryError: Error {
     case failed(reason: String)
 }
 
+extension AppleRepoRepositoryError: LocalizedError {
+    var errorDescription: String? {
+        switch self {
+        case let .failed(reason):
+            return reason
+        }
+    }
+}
+
 protocol AppleRepoRepositoryProtocol {
     func fetch(page: Int, pageSize: Int) async -> Result<(repos: [RepoValue], hasMore: Bool), AppleRepoRepositoryError>
 }
