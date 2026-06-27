@@ -19,7 +19,6 @@ protocol EmojiRepositoryProtocol {
     func fetchRandom() async -> Result<EmojiValue, EmojiRepositoryError>
 }
 
-@MainActor
 class EmojiRepository: EmojiRepositoryProtocol {
     private let remoteSource: EmojisAPIProtocol
     private let localSource: ModelContext

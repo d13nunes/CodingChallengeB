@@ -20,7 +20,6 @@ protocol AvatarRepositoryProtocol {
     func delete(username: String) async -> Result<Void, AvatarRepositoryError>
 }
 
-@MainActor
 class AvatarRepository: AvatarRepositoryProtocol {
     private let remoteSource: AvatarsAPIProtocol
     private let localSource: ModelContext

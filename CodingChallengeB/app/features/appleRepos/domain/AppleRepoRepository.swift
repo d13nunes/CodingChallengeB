@@ -18,7 +18,6 @@ protocol AppleRepoRepositoryProtocol {
     func fetch(page: Int, pageSize: Int) async -> Result<(repos: [RepoValue], hasMore: Bool), AppleRepoRepositoryError>
 }
 
-@MainActor
 class AppleRepoRepository: AppleRepoRepositoryProtocol {
     private let api: AppleReposAPIProtocol
 
