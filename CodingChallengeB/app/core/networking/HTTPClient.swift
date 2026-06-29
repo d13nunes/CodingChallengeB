@@ -83,7 +83,7 @@ final class HTTPClient: HTTPClientProtocol {
         self.decoder = decoder
     }
 
-    func get<Value: Decodable>(_ url: URL, as type: Value.Type = Value.self) async -> Result<APIResponse<Value>, APIError> {
+    func get<Value: Decodable>(_ url: URL, as _: Value.Type = Value.self) async -> Result<APIResponse<Value>, APIError> {
         do {
             let (data, response) = try await session.data(from: url)
             guard let http = response as? HTTPURLResponse else {

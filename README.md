@@ -80,7 +80,7 @@ CodingChallengeB/
 │   │   ├── viewmodel/ViewModel.swift
 │   │   └── ui/                      # CachedAsyncImage, ImageCache
 │   └── features/
-│       ├── emojis/                  # emjis random and list feature
+│       ├── emojis/                  # emojis random and list feature
 │       ├── avatars/                 # avatar search and history feature
 │       ├── appleRepos/              # apple's repos list feature
 │       └── main/                    # main screen + view model
