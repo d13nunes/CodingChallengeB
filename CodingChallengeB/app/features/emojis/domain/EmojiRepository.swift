@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import SwiftData
 
@@ -21,17 +22,17 @@ protocol EmojiRepositoryProtocol {
 
 class EmojiRepository: EmojiRepositoryProtocol {
     private let remoteSource: EmojisAPIProtocol
-    private let localSource: ModelContext
+    private let source: EmojiSourceProtocol
 
     init(remoteSource: EmojisAPIProtocol, localSource: ModelContext) {
         self.remoteSource = remoteSource
-        self.localSource = localSource
+        source = EmojiSource(modelContainer: localSource.container)
     }
 
     func fetch(useCache: Bool = true) async -> Result<[EmojiValue], EmojiRepositoryError> {
         do {
             if useCache {
-                let localEmojis = try await getCachedEmojis()
+                let localEmojis = try await source.get()
                 if !localEmojis.isEmpty {
                     return .success(localEmojis)
                 }
@@ -42,23 +43,18 @@ class EmojiRepository: EmojiRepositoryProtocol {
             case let .failure(error):
                 return .failure(EmojiRepositoryError.failed(reason: error.localizedDescription))
             case let .success(emojis):
-                try localSource.delete(model: EmojiEntity.self)
-                for emoji in emojis {
-                    localSource.insert(EmojiEntity(name: emoji.name, urlString: emoji.url))
+                do {
+                    try await source.insert(emojis)
+
+                } catch {
+                    print(error)
                 }
-                try localSource.save()
             }
-            let localEmojis = try await getCachedEmojis()
+            let localEmojis = try await source.get()
             return .success(localEmojis)
         } catch {
             return .failure(EmojiRepositoryError.failed(reason: error.localizedDescription))
         }
-    }
-
-    private func getCachedEmojis(sortBy: [SortDescriptor<EmojiEntity>] = [SortDescriptor(\.name, order: .forward)]) async throws -> [EmojiValue] {
-        let descriptor = FetchDescriptor<EmojiEntity>(sortBy: sortBy)
-        let localEmojis: [EmojiEntity] = try localSource.fetch(descriptor)
-        return localEmojis.map { $0.toValue() }
     }
 
     func fetchRandom() async -> Result<EmojiValue, EmojiRepositoryError> {
@@ -72,12 +68,6 @@ class EmojiRepository: EmojiRepositoryProtocol {
             }
             return .success(randomEmoji)
         }
-    }
-}
-
-extension EmojiEntity {
-    func toValue() -> EmojiValue {
-        return EmojiValue(id: id, name: name, url: URL(string: urlString))
     }
 }
 

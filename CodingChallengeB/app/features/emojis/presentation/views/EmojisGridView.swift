@@ -18,7 +18,7 @@ struct EmojisGridView: View {
             case let .loaded(emojis):
                 ScrollView {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 120), spacing: 16)], spacing: 16) {
-                        ForEach(emojis, id: \.name) { emoji in
+                        ForEach(emojis, id: \.id) { emoji in
                             EmojiCardView(name: emoji.name, imageURL: emoji.url)
                                 .frame(height: 120)
                                 .onTapGesture {
